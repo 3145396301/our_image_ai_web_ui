@@ -1,17 +1,19 @@
 <template>
-  <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div>
+    <LoginDiv/>
   </div>
+
+
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
-
+import LoginDiv from "@/components/LoginDiv.vue";
+import $ from 'jquery'
+$("body").css("background-color", "rgba(0,0,0,0)");
 export default {
   name: 'App',
   components: {
-    HelloWorld
+    LoginDiv
   }
 }
 </script>
@@ -24,5 +26,8 @@ export default {
   text-align: center;
   color: #2c3e50;
   margin-top: 60px;
+}
+body{
+  user-select: none;
 }
 </style>
