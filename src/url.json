@@ -1,0 +1,80 @@
+{
+  "protocol": "http",
+  "serverHost": "localhost",
+  "port": 8000,
+  "proxy": true,
+  "serviceUri": {
+    "user": {
+      "protocol": "http",
+      "serverHost": "39.98.109.91",
+      "port": 8000,
+      "proxyPrefix": "/user",
+      "context": "/api/user",
+      "sendSMS": "/sendSMS/",
+      "register": "/register",
+      "login": "/login/",
+      "logout": "/logout",
+      "checkUsername": "/checkUsername/",
+      "getUserInfo": "/getUserInfo",
+      "signIn": "/signIn",
+      "genVerificationCode": "/gen",
+      "checkVerificationCode": "/check"
+    },
+    "aiImage": {
+      "protocol": "http",
+      "serverHost": "39.98.109.91",
+      "port": 8001,
+      "proxyPrefix": "/userGenerateImage",
+      "context": "/api",
+      "texttoimage": "/texttoimage",
+      "imagetoimage": "/imagetoimage",
+      "progress": "/progress/",
+      "recentlyGenerated": "/recentlyGenerated"
+    },
+    "setting": {
+      "protocol": "http",
+      "serverHost": "39.98.109.91",
+      "port": 8001,
+      "proxyPrefix": "/userGenerateImage",
+      "context": "/aiSetting",
+      "modelList": "/getModelList",
+      "samplerList" : "/getSamplerList",
+      "loraList" : "/getLorasList",
+      "currentModel" : "/getCurrentModel"
+    },
+    "userImage": {
+      "protocol": "http",
+      "serverHost": "39.98.109.91",
+      "port": 8001,
+      "proxyPrefix": "/userGenerateImage",
+      "context": "",
+      "imageInfo": "/image/info/",
+      "deleteImage": "/image/",
+      "imageHistory": "/user/image/history",
+      "imageUrl": "/user/image/"
+    },
+    "share": {
+      "protocol": "http",
+      "serverHost": "39.98.109.91",
+      "port": 8002,
+      "proxyPrefix": "/shareImage",
+      "context": "",
+      "shareImage": "/api/shareImage"
+    },
+    "activity": {
+      "protocol": "http",
+      "serverHost": "39.98.109.91",
+      "port": 9996,
+      "context": ""
+    },
+    "pay": {
+      "protocol": "http",
+      "serverHost": "39.98.109.91",
+      "port": 8000,
+      "proxyPrefix": "/user",
+      "context": "",
+      "pay": "/pay",
+      "payLevels": "/payLevels"
+    }
+  }
+}

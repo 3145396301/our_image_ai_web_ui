@@ -3,15 +3,24 @@ module.exports = defineConfig({
   transpileDependencies: true,
   lintOnSave: false,
   devServer:{
+    https:true,
     proxy:{
-      'gen':{
-        target:'http://localhost:8080',
+      '/user':{
+        target:'http://127.0.0.1:8083',
         changeOrigin:true
       },
-      'check':{
-        target:'http://localhost:8080',
+      '/userGenerateImage':{
+        target:'http://127.0.0.1:8083',
         changeOrigin:true
       },
+      '/shareImage':{
+        target:'http://127.0.0.1:8083',
+        changeOrigin:true
+      },
+      '/activity':{
+        target:'http://127.0.0.1:8083',
+        changeOrigin:true
+      }
     }
   }
 

@@ -13,35 +13,11 @@
 
 <script>
 import TAC from "./../tac.min";
-import axios from "axios";
-const host = 'https://xiaoxve.cn';
+import UrlObj from "@/urlObj";
+const host = 'http://39.98.109.91:8000';
 export default {
   name: 'CaptchaComponent', // 组件名称
-  props: ['userForm', 'logined', 'isLogin'],
   methods: {
-    login(captchaId) {
-      let url = host+'/';
-      if (this.isLogin) {
-        url += 'login';
-      } else {
-        url += 'register';
-      }
-      axios.post(url, {
-        user: {
-          username: this.userForm.username,
-          password: this.userForm.password
-        },
-        rememberMe: this.userForm.staySignedIn,
-        captchaId: captchaId
-      },{
-        headers: {
-          agreeToTheUserAgreement: true,
-        }
-      }).then(res => {
-        this.logined(res);
-      });
-
-    },
     openCaptcha(type) {
       this.config.requestCaptchaDataUrl = host+`/gen?type=${type}`;
       new this.TAC(this.config, this.style).init();
@@ -50,12 +26,17 @@ export default {
   data() {
     return {
       config: {
-        requestCaptchaDataUrl: host+"/gen?type=ROTATE",
-        validCaptchaUrl: host+"/check",
+        requestCaptchaDataUrl: UrlObj.user.genVerificationCode+"?type=ROTATE",
+        validCaptchaUrl: UrlObj.user.checkVerificationCode,
         bindEl: "#captcha-box",
         validSuccess: (res, c, tac) => {
-          // tac.destroyWindow();
-          this.login(res.data.id)
+          this.$emit("success", res.data.id);
+          this.$emit("close");
+        },
+        // 关闭按钮回调事件
+        btnCloseFun: (el, tac) => {
+          this.$emit("close");
+          this.$notify.info("触发关闭")
         }
       },
       style : {
