@@ -40,7 +40,9 @@
       "modelList": "/getModelList",
       "samplerList" : "/getSamplerList",
       "loraList" : "/getLorasList",
-      "currentModel" : "/getCurrentModel"
+      "currentModel" : "/getCurrentModel",
+      "updateModel": "/updateModel",
+      "loraInfo": "/getLoraInfo/"
     },
     "userImage": {
       "protocol": "http",

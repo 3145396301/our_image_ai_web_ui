@@ -37,7 +37,9 @@ let urlObj = {
         modelList: settingBaseUrl + json.serviceUri.setting.modelList,
         samplerList: settingBaseUrl + json.serviceUri.setting.samplerList,
         loraList: settingBaseUrl +json.serviceUri.setting.loraList,
-        currentModel: settingBaseUrl + json.serviceUri.setting.currentModel
+        currentModel: settingBaseUrl + json.serviceUri.setting.currentModel,
+        updateModel: settingBaseUrl + json.serviceUri.setting.updateModel,
+        loraInfo: settingBaseUrl + json.serviceUri.setting.loraInfo,
     },
     userImage: {
         imageInfo: userImageBaseUrl + json.serviceUri.userImage.imageInfo,

@@ -9,17 +9,17 @@
         <button @click="showImportDialog('negative')">导入负向提示词</button>
       </div>
       <div class="form-group">
-        <label for="prompt">提示词 (Prompt)</label>
+        <label for="prompt">提示词 </label>
         <textarea id="prompt" v-model="prompt" placeholder="请输入提示词，多个词用逗号分割"
                   :disabled="locked"></textarea>
       </div>
       <div class="form-group">
-        <label for="negative-prompt">否定词 (negative prompt)</label>
+        <label for="negative-prompt">否定词 </label>
         <textarea id="negative-prompt" v-model="negativePrompt" placeholder="请输入否定词，多个词用逗号分割"
                   :disabled="locked"></textarea>
       </div>
       <div class="form-group">
-        <label for="image2image">图生图 (image2image)</label>
+        <label for="image2image">图生图</label>
         <div class="upload-box" @drop.prevent="onDrop" @dragover.prevent>
           拖拽图片到此处上传
           <input type="file" @change="onFileChange" class="file-input" :disabled="locked"/>
@@ -30,11 +30,11 @@
       </div>
       <!--   如果有图片则显示表单项 重绘强度、大小重置模式   -->
       <div v-show="file!=null" class="form-group">
-        <label for="denoisingStrength">重绘强度 (Denoising Strength)</label>
+        <label for="denoisingStrength">重绘强度 </label>
         <input type="number" v-model.number="denoisingStrength" :disabled="locked" min="0" max="1" step="0.05">
       </div>
       <div v-show="file!=null" class="form-group">
-        <label for="resizeMode">大小重置模式 (Resize Mode)</label>
+        <label for="resizeMode">大小重置模式 </label>
         <!-- 0-拉伸  1-裁剪  2-填充  3-直接缩放-->
         <select id="resizeMode" v-model="resizeMode" :disabled="locked">
           <option value="0">拉伸</option>
@@ -48,17 +48,17 @@
       </div>
       <div class="settings">
         <div class="form-group" v-if="admin">
-          <label for="checkpoint">生成模型 (Checkpoint等)</label>
+          <label for="checkpoint">生成模型 </label>
           <select id="checkpoint" v-model="checkpoint" @change="changeModel(checkpoint)" :disabled="locked">
             <option v-for="item in checkpoints" :key="item" :value="item">{{ item }}</option>
           </select>
         </div>
         <div class="form-group">
-          <label for="lor">风格插件 (Lora等)</label>
+          <label for="lor">风格插件 </label>
           <div class="loras-container">
             <div v-for="item in loras" class="loras" :key="item.name">
               <div class="lora-item">{{ item.name }}</div>
-              <input type="checkbox" :value="item.metadata.ss_output_name" :disabled="locked" @change="loraChange(item.metadata.ss_output_name)"
+              <input type="checkbox" :value="item.name" :disabled="locked" @change="loraChange(item.name)"
                      class="lora-item-chackbox"/>
             </div>
           </div>
@@ -87,15 +87,15 @@
           </div>
         </div>
         <div class="form-group">
-          <label for="steps">采样步数 (Steps)</label>
+          <label for="steps">采样步数 </label>
           <input type="number" v-model.number="steps" :disabled="locked">
         </div>
         <div class="form-group">
-          <label for="cfgScale">提示词引导系数 (CFG Scale)</label>
+          <label for="cfgScale">提示词引导系数 </label>
           <input type="number" v-model.number="cfgScale" :disabled="locked" min="1">
         </div>
         <div class="form-group">
-          <label for="seed">随机种子 (Seed)</label>
+          <label for="seed">随机种子 </label>
           <input type="number" v-model.number="seed" :disabled="locked">
         </div>
 <!--        <div class="form-group">-->
@@ -104,7 +104,7 @@
 <!--          <input type="radio" v-model="restoreFaces" :value="false" :disabled="locked"> 否-->
 <!--        </div>-->
         <div class="form-group">
-          <label for="samplerIndex">采样器 (Sampler Index)</label>
+          <label for="samplerIndex">采样器 </label>
           <select id="samplerIndex" v-model="samplerIndex" :disabled="locked">
             <option v-for="(item, index) in samplers" :key="item.name" :value="index">{{ item }}</option>
           </select>
@@ -151,6 +151,7 @@
 <script>
 import axios from "axios";
 import url from "@/urlObj";
+import urlObj from "@/urlObj";
 
 export default {
   name: 'AIImageGenerator',
@@ -196,6 +197,9 @@ export default {
     this.getCurrentModel()
     this.getSamplers()
   },
+  mounted() {
+    this.reset()
+  },
   watch: {
     width(newVal, oldVal) {
       this.triggerAnimation('width');
@@ -213,6 +217,28 @@ export default {
         this.updateNegativePromptList();
       },
     },
+    $data: {
+      handler(newVal) {
+        // 复制一份
+        const copy = {
+          prompt:newVal.prompt,
+          negativePrompt:newVal.negativePrompt,
+          width:newVal.width,
+          height:newVal.height,
+          steps:newVal.steps,
+          cfgScale:newVal.cfgScale,
+          seed:newVal.seed,
+          samplerIndex:newVal.samplerIndex,
+          denoisingStrength:newVal.denoisingStrength,
+        };
+        // 删除不需要持久化的属性
+
+        // 存储过滤后的数据
+        localStorage.setItem("myAppData", JSON.stringify(copy));
+      },
+      deep: true
+    }
+
   },
   methods: {
     // 锁定/解锁
@@ -486,7 +512,7 @@ export default {
     },
     changeModel(model) {
       console.log(model)
-      axios.post("http://localhost:8080/aiSetting/updateModel", {
+      axios.post(urlObj.setting.updateModel, {
         title: model
       }).then(() => {
         this.getCurrentModel()
@@ -539,6 +565,13 @@ export default {
       this.dialogInput = '';
       this.dialogType = '';
       this.locked=false;
+    },
+    //属性还原
+    reset() {
+      const savedData = localStorage.getItem("myAppData");
+      if (savedData) {
+        Object.assign(this.$data, JSON.parse(savedData));
+      }
     }
   },
 };
