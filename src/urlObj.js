@@ -59,4 +59,5 @@ let urlObj = {
     }
 
 };
+console.log(urlObj)
 export default urlObj;

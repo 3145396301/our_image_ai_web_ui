@@ -14,7 +14,7 @@
 <script>
 import TAC from "./../tac.min";
 import UrlObj from "@/urlObj";
-const host = 'http://39.98.109.91:8000';
+const host = 'http://127.0.0.1:8000';
 export default {
   name: 'CaptchaComponent', // 组件名称
   methods: {
