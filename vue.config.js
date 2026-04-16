@@ -15,7 +15,7 @@ module.exports = defineConfig({
             // 如果有 CA 证书（自签名时需要）
             // ca: fs.readFileSync(resolveCert('ca.pem')),
         },
-        host: '192.168.5.2',
+        host: '192.168.5.29',
         proxy: {
             '/user': {
                 target: 'http://127.0.0.1:8000',

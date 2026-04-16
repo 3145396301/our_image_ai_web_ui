@@ -1,6 +1,32 @@
 <template>
   <div class="container">
     <div class="scroll-container">
+      <div class="form-group">
+        <label for="lor">风格插件 </label>
+        <!-- 容器：用于限制高度和滚动 -->
+        <div class="loras-container">
+
+          <!-- 将 div 改为 label，这样点击图片或文字时，会自动勾选内部的 checkbox -->
+          <label v-for="item in loras" class="loras-item" :key="item.name">
+
+            <!-- 1. 图片部分 (直接展示在上方) -->
+            <img v-if="item.imagePath" :src="item.imagePath" class="lora-image" alt="preview" />
+            <!-- 如果有的 lora 没有图片，给一个占位框保持排版整齐 -->
+            <div v-else class="lora-image-placeholder">无预览图</div>
+
+            <!-- 2. 信息和复选框部分 (展示在下方) -->
+            <div class="lora-info">
+              <div class="lora-name" :title="item.name">{{ item.name }}</div>
+              <!-- 注意：修正了原来 checkbox 的拼写 (原来是 chackbox) -->
+              <input type="checkbox" :value="item.name" :disabled="locked" @change="loraChange(item.name)"
+                     class="lora-item-checkbox"/>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="">
+        <button @click="generateImage" class="subBut">生成</button>
+      </div>
       <div class="header">
         <button class="lock-button" @click="lockInfo">{{ locked ? '🔒 信息已锁定' : '🔓 信息未锁定' }}</button>
       </div>
@@ -53,16 +79,7 @@
             <option v-for="item in checkpoints" :key="item" :value="item">{{ item }}</option>
           </select>
         </div>
-        <div class="form-group">
-          <label for="lor">风格插件 </label>
-          <div class="loras-container">
-            <div v-for="item in loras" class="loras" :key="item.name">
-              <div class="lora-item">{{ item.name }}</div>
-              <input type="checkbox" :value="item.name" :disabled="locked" @change="loraChange(item.name)"
-                     class="lora-item-chackbox"/>
-            </div>
-          </div>
-        </div>
+
 <!--        <div class="form-group">-->
 <!--          <label for="vae">解码器 (VAE)</label>-->
 <!--          <select id="vae" v-model="vae" :disabled="locked">-->
@@ -129,9 +146,7 @@
           </button>
         </div>
       </div>
-      <div class="footer">
-        <button @click="generateImage" class="subBut">生成</button>
-      </div>
+
       <!-- Dialog for importing prompts -->
       <div v-if="showDialog" class="dialog-overlay">
         <div class="dialog">
@@ -790,22 +805,100 @@ textarea {
   margin-left: 10px;
 }
 
-.loras {
-  width: 50%;
-  display: inline-block;
+/* 1. 容器样式：固定大小 + 滚动条 */
+.loras-container {
+  max-height: 500px; /* 限制盒子最大高度，可以根据需要调大一点 */
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 两列布局 */
+  gap: 15px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: #f9fbfc; /* 加一点淡淡的背景色区分 */
+  /* ★ 关键：防止同一行的图片高度不同时被强制拉伸 */
+  align-items: start;
 }
 
-.lora-item {
-  display: inline-block;
-  width: 90%;
-  white-space: nowrap;
+/* 滚动条美化 */
+.loras-container::-webkit-scrollbar {
+  width: 6px;
+}
+.loras-container::-webkit-scrollbar-thumb {
+  background: #c0c4cc;
+  border-radius: 3px;
+}
+
+/* 2. 单个卡片 */
+.loras-item {
+  display: flex;
+  flex-direction: column;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
   overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: #fff;
 }
 
-.lora-item-chackbox {
-  display: inline;
-  margin: 0;
-  width: 10%;
+.loras-item:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* 选中时的反馈 */
+.loras-item:has(.lora-item-checkbox:checked) {
+  border-color: #409eff;
+  background-color: #f0f7ff;
+}
+
+/* 3. 图片样式：★等比例展示完整大图★ */
+.lora-image {
+  width: 100%;
+  height: auto; /* 高度根据图片比例自动撑开，绝对不裁剪 */
+  display: block;
+}
+
+/* 无图片时的占位 */
+.lora-image-placeholder {
+  width: 100%;
+  height: 150px;
+  background-color: #f5f7fa;
+  color: #909399;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+/* 4. 底部文字和复选框 */
+.lora-info {
+  display: flex;
+  align-items: flex-start; /* 文本变多时，顶部对齐更美观 */
+  justify-content: space-between;
+  padding: 10px;
+}
+
+/* Lora名称：★允许多行显示完整名字★ */
+.lora-name {
+  flex: 1;
+  font-size: 13px;
+  color: #333;
+  margin-right: 10px;
+  line-height: 1.4; /* 增加行高，多行文本更好看 */
+
+  /* 去掉 nowrap，改为允许换行 */
+  white-space: normal;
+  word-wrap: break-word; /* 防止长串英文把盒子撑破 */
+  word-break: break-all;
+}
+
+/* 复选框稍微下移居中 */
+.lora-item-checkbox {
+  margin-top: 2px;
+  cursor: pointer;
+  flex-shrink: 0; /* 防止复选框被名字挤压变形 */
+  width: 16px;
+  height: 16px;
 }
 
 .dialog-overlay {
