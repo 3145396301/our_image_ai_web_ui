@@ -215,6 +215,8 @@ body {
     font-family: 'Open Sans', sans-serif;
     font-size: 100%;
     background: #2196F3;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /*--header--*/
@@ -227,6 +229,7 @@ h1 {
     font-style: italic;
     margin: 3vw 1vw;
     font-family: 'Josefin Sans', sans-serif;
+    word-wrap: break-word;
 }
 
 h1 span,
@@ -274,6 +277,7 @@ h2 {
     justify-content: center;
     border-bottom: 8px solid #f7296f;
     border-radius: 30px 30px 50px 50px;
+    width: 90%;
 }
 
 .form-style-agile {
@@ -545,49 +549,213 @@ input.checkbox:checked:after {
     h1 {
         font-size: 2.6em;
     }
+
+    .sub-main-w3 form {
+        padding: 5vw;
+    }
+}
+
+@media(max-width:600px) {
+    h1 {
+        font-size: 2em;
+        margin: 2vw 1vw;
+        letter-spacing: 1px;
+    }
+
+    h2 {
+        font-size: 18px;
+        margin-bottom: 0.8em;
+    }
+
+    .sub-main-w3 form {
+        padding: 6vw;
+        border-radius: 20px 20px 30px 30px;
+        border-bottom: 6px solid #f7296f;
+    }
+
+    .form-style-agile {
+        margin-bottom: 1.2em;
+    }
+
+    .sub-main-w3 label {
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
+
+    .form-style-agile input[type="text"],
+    .form-style-agile input[type="password"] {
+        font-size: 13px;
+        padding: 12px 12px;
+    }
+
+    .sub-main-w3 input[type="submit"] {
+        padding: 12px 0;
+        margin-top: 20px;
+        font-size: 14px;
+        width: 60%;
+    }
+
+    .wthree-text ul li:nth-child(1),
+    .wthree-text ul li:nth-child(2) {
+        float: none;
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    .wthree-text ul li a {
+        font-size: 13px;
+    }
+
+    .footer p {
+        font-size: 12px;
+        letter-spacing: 1px;
+    }
 }
 
 @media(max-width:480px) {
     h1 {
-        font-size: 2.3em;
-        letter-spacing: 1px;
+        font-size: 1.8em;
+        letter-spacing: 0.5px;
+        margin: 3vw 1vw;
     }
-    .sub-main-w3 form {
-        padding: 7.5vw;
-    }
-    .footer p {
-        letter-spacing: 1px;
-    }
-}
 
-@media(max-width:414px) {
+    h2 {
+        font-size: 16px;
+    }
+
+    .sub-main-w3 form {
+        padding: 7vw;
+        margin: 0 3vw;
+    }
+
+    .form-style-agile {
+        margin-bottom: 1em;
+    }
+
+    .sub-main-w3 label {
+        font-size: 12px;
+        margin-bottom: 6px;
+    }
+
+    .sub-main-w3 label i {
+        font-size: 13px;
+        margin-left: 3px;
+    }
+
     .form-style-agile input[type="text"],
     .form-style-agile input[type="password"] {
         font-size: 13px;
         padding: 13px 15px;
     }
-    .wthree-text ul li:nth-child(1),
-    .wthree-text ul li:nth-child(2) {
-        float: none;
-    }
-    .wthree-text ul li:nth-child(2) {
-        margin-top: 10px;
-    }
+
     .sub-main-w3 input[type="submit"] {
-        width: 56%;
+        width: 65%;
+        padding: 11px 0;
+        margin-top: 15px;
+        font-size: 13px;
     }
+
+    .wthree-text {
+        width: 100%;
+    }
+
     .wthree-text ul li {
         display: block;
+        margin-bottom: 6px;
+    }
+
+    .wthree-text ul li a {
+        font-size: 12px;
+    }
+
+    .footer p {
+        letter-spacing: 1px;
+        font-size: 11px;
+    }
+}
+
+@media(max-width:414px) {
+    h1 {
+        font-size: 1.6em;
+    }
+
+    .sub-main-w3 form {
+        padding: 8vw;
+        margin: 0 2vw;
+    }
+
+    .form-style-agile input[type="text"],
+    .form-style-agile input[type="password"] {
+        font-size: 13px;
+        padding: 13px 15px;
+    }
+
+    .sub-main-w3 input[type="submit"] {
+        width: 70%;
+    }
+}
+
+@media(max-width:360px) {
+    h1 {
+        font-size: 1.4em;
+        margin: 4vw 1vw;
+    }
+
+    h2 {
+        font-size: 14px;
+    }
+
+    .sub-main-w3 form {
+        padding: 20px 12px;
+        margin: 0 2vw;
+        border-radius: 15px 15px 25px 25px;
+    }
+
+    .form-style-agile {
+        margin-bottom: 0.8em;
+    }
+
+    .sub-main-w3 label {
+        font-size: 11px;
+        margin-bottom: 5px;
+    }
+
+    .form-style-agile input[type="text"],
+    .form-style-agile input[type="password"] {
+        font-size: 12px;
+        padding: 10px 12px;
+    }
+
+    .sub-main-w3 input[type="submit"] {
+        width: 75%;
+        padding: 10px 0;
+        margin-top: 12px;
+        font-size: 12px;
+    }
+
+    .wthree-text ul li a {
+        font-size: 11px;
     }
 }
 
 @media(max-width:320px) {
     h1 {
-        font-size: 1.8em;
+        font-size: 1.3em;
         margin: 5vw 1vw;
     }
+
     .sub-main-w3 form {
-        padding: 25px 14px;
+        padding: 18px 10px;
+    }
+
+    .form-style-agile input[type="text"],
+    .form-style-agile input[type="password"] {
+        font-size: 12px;
+        padding: 10px 10px;
+    }
+
+    .sub-main-w3 input[type="submit"] {
+        width: 80%;
     }
 }
 

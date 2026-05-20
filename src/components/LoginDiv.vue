@@ -8,7 +8,7 @@
     <XyzTransition xyz="fade in-right-100% in-up-100% out-up-100% out-left-100%">
       <div class="loginForm" v-if="isLogin">
         <h1>Effect Login Form</h1>
-        <div class="sub-main-w3" :style="{margin: 'auto',width: '800px',}">
+        <div class="sub-main-w3" :style="{margin: 'auto'}">
           <form @submit.prevent="showCaptcha" class="form">
             <h2>Login Now <i class="fas fa-level-down-alt"></i></h2>
             <div class="form-style-agile">
@@ -45,7 +45,7 @@
                 </li>
               </ul>
             </div>
-            <input style="width: 50%" type="submit" value="登 录">
+            <input class="submit-btn" type="submit" value="登 录">
             <div class="cutover" @click="cutover">+</div>
           </form>
         </div>
@@ -55,7 +55,7 @@
     <XyzTransition xyz="fade in-left-100% in-up-100% out-right-100% out-up-100%">
       <div class="signInForm" v-if="!isLogin">
         <h1>registered Form</h1>
-        <div class="sub-main-w3" :style="{margin: 'auto',width: '800px',}">
+        <div class="sub-main-w3" :style="{margin: 'auto'}">
           <form @submit.prevent="register" class="form">
             <h2>registered Now <i class="fas fa-level-down-alt"></i></h2>
             <div class="form-style-agile">
@@ -110,7 +110,7 @@
                 </li>
               </ul>
             </div>
-            <input type="submit" value="注 册">
+            <input class="submit-btn" type="submit" value="注 册">
             <div class="cutover" @click="cutover">-</div>
           </form>
         </div>
@@ -284,6 +284,13 @@ export default {
 <style scoped>
 .sub-main-w3 {
   background: rgba(10, 10, 10, 0.17);
+  max-width: 600px;
+  width: 90%;
+}
+
+.submit-btn {
+  width: 50%;
+  min-width: 120px;
 }
 
 .cutover {
@@ -300,7 +307,6 @@ export default {
   border-radius: 50%;
   background-color: #a9ffe5;
   user-select: none;
-
 }
 
 .loginForm {
@@ -308,6 +314,8 @@ export default {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .signInForm {
@@ -315,6 +323,8 @@ export default {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .login-component {
@@ -333,7 +343,8 @@ export default {
   color: white;
   padding: 10px;
 }
-.captcha-cover{
+
+.captcha-cover {
   position: absolute;
   top: 0;
   left: 0;
@@ -346,4 +357,58 @@ export default {
   z-index: 999;
 }
 
+/* 平板设备 */
+@media (max-width: 768px) {
+  .sub-main-w3 {
+    width: 85%;
+  }
+
+  .cutover {
+    right: 15px;
+    top: 15px;
+    font-size: 24px;
+    width: 45px;
+    height: 45px;
+    line-height: 42px;
+  }
+}
+
+/* 手机设备 */
+@media (max-width: 480px) {
+  .sub-main-w3 {
+    width: 90%;
+    max-width: 100%;
+  }
+
+  .submit-btn {
+    width: 60%;
+  }
+
+  .cutover {
+    right: 10px;
+    top: 10px;
+    font-size: 20px;
+    width: 40px;
+    height: 40px;
+    line-height: 38px;
+  }
+}
+
+/* 小屏幕手机 */
+@media (max-width: 360px) {
+  .sub-main-w3 {
+    width: 95%;
+  }
+
+  .submit-btn {
+    width: 70%;
+  }
+
+  .cutover {
+    font-size: 18px;
+    width: 35px;
+    height: 35px;
+    line-height: 33px;
+  }
+}
 </style>

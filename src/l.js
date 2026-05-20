@@ -3,20 +3,21 @@ var init=(function($){
         background = canvas[0],
         foreground1 = canvas[1],
         foreground2 = canvas[2],
+        isMobile = window.innerWidth <= 768,
         config = {
             circle: {
-                amount: 18,
-                layer: 3,
+                amount: isMobile ? 8 : 18,
+                layer: isMobile ? 2 : 3,
                 color: [157, 97, 207],
                 alpha: 0.3
             },
             line: {
-                amount: 12,
-                layer: 3,
+                amount: isMobile ? 6 : 12,
+                layer: isMobile ? 2 : 3,
                 color: [255, 255, 255],
                 alpha: 0.3
             },
-            speed: 0.5,
+            speed: isMobile ? 0.3 : 0.5,
             angle: 20
         };
 
@@ -228,6 +229,15 @@ var init=(function($){
             createItem();
         });
         $(window).resize(function(){
+            var newIsMobile = window.innerWidth <= 768;
+            if (newIsMobile !== isMobile) {
+                isMobile = newIsMobile;
+                config.circle.amount = isMobile ? 8 : 18;
+                config.circle.layer = isMobile ? 2 : 3;
+                config.line.amount = isMobile ? 6 : 12;
+                config.line.layer = isMobile ? 2 : 3;
+                config.speed = isMobile ? 0.3 : 0.5;
+            }
             setCanvasHeight();
             createItem();
         });
