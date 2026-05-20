@@ -1,7 +1,10 @@
 <template>
   <div class="effect-preview">
     <div class="image-preview">
-      <div class="image-container" @mouseover="showButtons = true" @mouseleave="showButtons = false">
+      <div class="image-container"
+           @mouseover="!isTouchDevice && (showButtons = true)"
+           @mouseleave="!isTouchDevice && (showButtons = false)"
+           @click.stop="isTouchDevice && (showButtons = !showButtons)">
         <img v-show="!queueWait" :src="imageSrc" alt="Image preview">
         <div  v-show="queueWait" class="">
           <div class="queue-wait-info-text">
@@ -46,6 +49,7 @@ export default {
       eta: null,
       numberOfQueues: 0,
       progress: {},
+      isTouchDevice: false,
       showButtons: false,
       info: null
     };
@@ -56,6 +60,9 @@ export default {
     } else {
       this.getProgress();
     }
+  },
+  mounted() {
+    this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   },
   methods: {
     getProgress() {
@@ -153,15 +160,29 @@ export default {
 
 <style scoped>
 .effect-preview {
-  flex: 0 0 calc(100% / 3); /* 调整以同时显示最多3个预览 */
+  flex: 0 0 calc(100% / 3);
   box-sizing: border-box;
   padding: 10px;
   background-color: #2d2d2d;
   color: #fff;
-  margin-bottom: 20px; /* 调整预览之间的间距 */
+  margin-bottom: 20px;
   border: 1px solid #444;
   border-radius: 5px;
-  font-size: 1rem; /* 基本字体大小 */
+  font-size: 1rem;
+}
+
+@media (max-width: 767px) {
+  .effect-preview {
+    flex: 0 0 calc(50% - 6px);
+    margin-bottom: 12px;
+    padding: 8px;
+  }
+}
+
+@media (max-width: 400px) {
+  .effect-preview {
+    flex: 0 0 100%;
+  }
 }
 
 .image-preview {
@@ -273,7 +294,7 @@ export default {
   transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
-  gap: 0.5em; /* 使用em单位 */
+  gap: 0.5em;
 }
 
 .button-container button {
@@ -281,44 +302,43 @@ export default {
   border: none;
   cursor: pointer;
   transition: transform 0.3s;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .button-container button img {
-  width: 2em; /* 使用em单位来设置图片大小 */
-  height: 2em; /* 使用em单位来设置图片大小 */
+  width: 2em;
+  height: 2em;
   background-color: white;
 }
 
 .button-container button:hover img {
-  transform: scale(1.1); /* 放大按钮图片 */
+  transform: scale(1.1);
 }
 
-/* 媒体查询，根据屏幕大小调整按钮图片大小 */
-@media (max-width: 1200px) {
-  .button-container button img {
-    width: 1.8em;
-    height: 1.8em;
+/* Touch devices: larger tap targets, horizontal layout */
+@media (hover: none) and (pointer: coarse) {
+  .button-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.55);
+    border-radius: 8px;
+    padding: 6px;
+    width: auto;
+    max-width: 90%;
   }
-}
-
-@media (max-width: 900px) {
+  .button-container button {
+    min-width: 44px;
+    min-height: 44px;
+  }
   .button-container button img {
     width: 1.6em;
     height: 1.6em;
-  }
-}
-
-@media (max-width: 600px) {
-  .button-container button img {
-    width: 1.4em;
-    height: 1.4em;
-  }
-}
-
-@media (max-width: 400px) {
-  .button-container button img {
-    width: 1.2em;
-    height: 1.2em;
   }
 }
 </style>

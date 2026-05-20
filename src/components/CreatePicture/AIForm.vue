@@ -1,167 +1,247 @@
 <template>
-  <div class="container">
-    <div class="scroll-container">
-      <div class="form-group">
-        <label for="lor">风格插件 </label>
-        <!-- 容器：用于限制高度和滚动 -->
-        <div class="loras-container">
+  <div class="ai-panel">
+    <div class="panel-scroll">
 
-          <!-- 将 div 改为 label，这样点击图片或文字时，会自动勾选内部的 checkbox -->
-          <label v-for="item in loras" class="loras-item" :key="item.name">
+      <!-- ── 顶部栏 ── -->
+      <div class="panel-topbar">
+        <span class="panel-title"><i class="icon-spark">✦</i> AI 绘图</span>
+        <button class="lock-btn" @click="lockInfo" :class="{ locked }">
+          {{ locked ? '🔒 已锁定' : '🔓 未锁定' }}
+        </button>
+      </div>
 
-            <!-- 1. 图片部分 (直接展示在上方) -->
-            <img v-if="item.imagePath" :src="item.imagePath" class="lora-image" alt="preview" />
-            <!-- 如果有的 lora 没有图片，给一个占位框保持排版整齐 -->
-            <div v-else class="lora-image-placeholder">无预览图</div>
-
-            <!-- 2. 信息和复选框部分 (展示在下方) -->
-            <div class="lora-info">
-              <div class="lora-name" :title="item.name">{{ item.name }}</div>
-              <!-- 注意：修正了原来 checkbox 的拼写 (原来是 chackbox) -->
-              <input type="checkbox" :value="item.name" :disabled="locked" @change="loraChange(item.name)"
-                     class="lora-item-checkbox"/>
+      <!-- ── 生成按钮 ── -->
+      <button @click="generateImage" class="generate-btn" :disabled="locked">
+        <span>⚡</span> {{ file ? '图生图' : '文生图' }}
+      </button>
+      <!-- ── 生成模型 ── -->
+      <section class="card" v-if="admin">
+        <div class="card-header">
+          <span class="section-label">🤖 生成模型</span>
+          <span class="current-tag">{{ checkpoint }}</span>
+        </div>
+        <div class="model-grid">
+          <label v-for="item in checkpoints" :key="item.title"
+                 class="model-card" :class="{ selected: checkpoint === item.title }"
+                 @click="!locked && selectCheckpoint(item.title)">
+            <img v-if="item.imagePath" :src="item.imagePath" class="model-img" alt="preview" />
+            <div v-else class="model-placeholder">🎨</div>
+            <div class="model-footer">
+              <span class="model-name" :title="item.title">{{ item.title }}</span>
+              <input type="radio" :value="item.title" v-model="checkpoint" :disabled="locked" class="model-radio" />
             </div>
           </label>
         </div>
-      </div>
-      <div class="">
-        <button @click="generateImage" class="subBut">生成</button>
-      </div>
-      <div class="header">
-        <button class="lock-button" @click="lockInfo">{{ locked ? '🔒 信息已锁定' : '🔓 信息未锁定' }}</button>
-      </div>
-      <div class="form-group">
-        <button @click="showImportDialog('positive')">导入正向提示词</button>
-        <button @click="showImportDialog('negative')">导入负向提示词</button>
-      </div>
-      <div class="form-group">
-        <label for="prompt">提示词 </label>
-        <textarea id="prompt" v-model="prompt" placeholder="请输入提示词，多个词用逗号分割"
-                  :disabled="locked"></textarea>
-      </div>
-      <div class="form-group">
-        <label for="negative-prompt">否定词 </label>
-        <textarea id="negative-prompt" v-model="negativePrompt" placeholder="请输入否定词，多个词用逗号分割"
-                  :disabled="locked"></textarea>
-      </div>
-      <div class="form-group">
-        <label for="image2image">图生图</label>
-        <div class="upload-box" @drop.prevent="onDrop" @dragover.prevent>
-          拖拽图片到此处上传
-          <input type="file" @change="onFileChange" class="file-input" :disabled="locked"/>
+      </section>
+
+      <!-- ── 风格插件 (LoRA) ── -->
+      <section class="card">
+        <div class="card-header">
+          <span class="section-label">🎨 风格插件 (LoRA)</span>
+          <span class="badge">{{ selectedLoras.length }} 已选</span>
         </div>
-        <div v-if="imageSrc" class="image-preview">
-          <img :src="imageSrc" alt="Image preview"/>
+        <div class="lora-grid">
+          <label v-for="item in loras" :key="item.name"
+                 class="lora-card" :class="{ selected: selectedLoras.includes(item.name) }">
+            <div v-if="item.imagePath" class="lora-img-wrap">
+              <img :src="item.imagePath" class="lora-img" alt="preview" @error="item.imagePath = null" />
+            </div>
+            <div v-else class="lora-placeholder">🖼️</div>
+            <div class="lora-footer">
+              <span class="lora-name" :title="item.name">{{ item.name }}</span>
+              <input type="checkbox" :value="item.name" :disabled="locked"
+                     @change="loraChange(item.name)" class="lora-check" />
+            </div>
+          </label>
         </div>
-      </div>
-      <!--   如果有图片则显示表单项 重绘强度、大小重置模式   -->
-      <div v-show="file!=null" class="form-group">
-        <label for="denoisingStrength">重绘强度 </label>
-        <input type="number" v-model.number="denoisingStrength" :disabled="locked" min="0" max="1" step="0.05">
-      </div>
-      <div v-show="file!=null" class="form-group">
-        <label for="resizeMode">大小重置模式 </label>
-        <!-- 0-拉伸  1-裁剪  2-填充  3-直接缩放-->
-        <select id="resizeMode" v-model="resizeMode" :disabled="locked">
-          <option value="0">拉伸</option>
-          <option value="1">裁剪</option>
-          <option value="2">填充</option>
-          <option value="3">直接缩放</option>
-        </select>
-      </div>
-      <div v-if="file!=null" class="form-group">
-        <button @click="clearImage">清除图片</button>
-      </div>
-      <div class="settings">
-        <div class="form-group" v-if="admin">
-          <label for="checkpoint">生成模型 </label>
-          <select id="checkpoint" v-model="checkpoint" @change="changeModel(checkpoint)" :disabled="locked">
-            <option v-for="item in checkpoints" :key="item" :value="item">{{ item }}</option>
+      </section>
+      <!-- ── 提示词 ── -->
+      <section class="card">
+        <div class="card-header">
+          <span class="section-label">✏️ 提示词</span>
+          <div class="row-gap">
+            <button class="ghost-btn" @click="showImportDialog('positive')" :disabled="locked">导入正向</button>
+            <button class="ghost-btn" @click="showImportDialog('negative')" :disabled="locked">导入负向</button>
+          </div>
+        </div>
+        <textarea v-model="prompt" placeholder="正向提示词，多个词用逗号分割…" :disabled="locked" class="prompt-ta"></textarea>
+        <textarea v-model="negativePrompt" placeholder="负向提示词，多个词用逗号分割…" :disabled="locked" class="prompt-ta negative"></textarea>
+
+        <div v-if="showSetWeights" class="weight-panel">
+          <div v-if="promptList.length > 0">
+            <p class="weight-title">正向权重</p>
+            <div v-for="(item, i) in promptList" :key="'p'+i" class="weight-row">
+              <span class="weight-name">{{ item.prompt }}</span>
+              <input type="number" v-model.number="item.weight" step="0.1" class="weight-input">
+            </div>
+          </div>
+          <div v-if="negativePromptList.length > 0">
+            <p class="weight-title">负向权重</p>
+            <div v-for="(item, i) in negativePromptList" :key="'n'+i" class="weight-row">
+              <span class="weight-name">{{ item.prompt }}</span>
+              <input type="number" v-model.number="item.weight" step="0.1" class="weight-input">
+            </div>
+          </div>
+          <button class="ghost-btn" @click="saveWeights">保存权重</button>
+        </div>
+        <button class="ghost-btn" style="margin-top:4px"
+                @click="toggleSetWeights"
+                v-if="!showSetWeights && (promptList.length > 0 || negativePromptList.length > 0)"
+        >⚖️ 设置权重</button>
+      </section>
+
+      <!-- ── 图生图 ── -->
+      <section class="card">
+        <div class="card-header">
+          <span class="section-label">🖼️ 图生图</span>
+          <button v-if="file" class="ghost-btn danger" @click="clearImage" :disabled="locked">清除图片</button>
+        </div>
+        <div class="drop-zone" @drop.prevent="onDrop" @dragover.prevent :class="{ 'has-image': !!imageSrc }">
+          <input type="file" @change="onFileChange" class="file-input" :disabled="locked" />
+          <div v-if="!imageSrc" class="drop-hint"><span>📂</span><span>拖拽或点击上传图片</span></div>
+          <img v-else :src="imageSrc" class="preview-img" alt="预览图" />
+        </div>
+        <div v-show="file != null" class="sub-params">
+          <div class="param-row">
+            <label>重绘强度</label>
+            <div class="slider-group">
+              <input type="range" v-model.number="denoisingStrength" min="0" max="1" step="0.05" :disabled="locked" />
+              <span class="param-val">{{ denoisingStrength.toFixed(2) }}</span>
+            </div>
+          </div>
+          <div class="param-row">
+            <label>大小重置模式</label>
+            <select v-model="resizeMode" :disabled="locked" class="param-select">
+              <option value="0">拉伸</option>
+              <option value="1">裁剪</option>
+              <option value="2">填充</option>
+              <option value="3">直接缩放</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 基础参数 ── -->
+      <section class="card">
+        <div class="card-header"><span class="section-label">🎛️ 基础参数</span></div>
+        <div class="size-grid">
+          <button v-for="size in imageSizes" :key="size" @click="selectImageSize(size)" :disabled="locked"
+                  class="size-btn" :class="{ active: isSizeActive(size) }">{{ size }}</button>
+        </div>
+        <div class="inline-params">
+          <div class="param-row half" :class="{ animate: animateWidth }">
+            <label>宽 (px)</label>
+            <input type="number" v-model.number="width" :disabled="locked" class="param-input">
+          </div>
+          <div class="param-row half" :class="{ animate: animateHeight }">
+            <label>高 (px)</label>
+            <input type="number" v-model.number="height" :disabled="locked" class="param-input">
+          </div>
+        </div>
+        <div class="param-row">
+          <label>采样步数</label>
+          <div class="slider-group">
+            <input type="range" v-model.number="steps" min="1" max="150" step="1" :disabled="locked" />
+            <span class="param-val">{{ steps }}</span>
+          </div>
+        </div>
+        <div class="param-row">
+          <label>提示词引导系数 (CFG)</label>
+          <div class="slider-group">
+            <input type="range" v-model.number="cfgScale" min="1" max="30" step="0.5" :disabled="locked" />
+            <span class="param-val">{{ cfgScale }}</span>
+          </div>
+        </div>
+        <div class="param-row">
+          <label>随机种子</label>
+          <div class="seed-group">
+            <input type="number" v-model.number="seed" :disabled="locked" class="param-input">
+            <button class="ghost-btn" @click="randomSeed" :disabled="locked">🎲</button>
+          </div>
+        </div>
+        <div class="param-row">
+          <label>采样器</label>
+          <select v-model="samplerIndex" :disabled="locked" class="param-select">
+            <option v-for="(item, index) in samplers" :key="item" :value="index">{{ item }}</option>
           </select>
         </div>
+      </section>
 
-<!--        <div class="form-group">-->
-<!--          <label for="vae">解码器 (VAE)</label>-->
-<!--          <select id="vae" v-model="vae" :disabled="locked">-->
-<!--            <option value="none">None</option>-->
-<!--          </select>-->
-<!--        </div>-->
-        <div class="form-group">
-          <label>图片尺寸</label>
-          <div class="image-sizes">
-            <button v-for="size in imageSizes" :key="size" @click="selectImageSize(size)" :disabled="locked">{{ size }}
-            </button>
+      <!-- ── 面部修复 ── -->
+      <section class="card">
+        <div class="card-header clickable" @click="toggleRestoreFaces">
+          <span class="section-label">👤 面部修复</span>
+          <div class="toggle-switch" :class="{ on: restoreFaces }">
+            <div class="toggle-thumb"></div>
           </div>
         </div>
-        <div class="form-group inline-group">
-          <div class="inline-item" :class="{'animate': animateWidth}">
-            <label>宽</label>
-            <input type="number" v-model.number="width" :disabled="locked">
-          </div>
-          <div class="inline-item" :class="{'animate': animateHeight}">
-            <label>高</label>
-            <input type="number" v-model.number="height" :disabled="locked">
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="steps">采样步数 </label>
-          <input type="number" v-model.number="steps" :disabled="locked">
-        </div>
-        <div class="form-group">
-          <label for="cfgScale">提示词引导系数 </label>
-          <input type="number" v-model.number="cfgScale" :disabled="locked" min="1">
-        </div>
-        <div class="form-group">
-          <label for="seed">随机种子 </label>
-          <input type="number" v-model.number="seed" :disabled="locked">
-        </div>
-<!--        <div class="form-group">-->
-<!--          <label>是否还原人脸 (Restore Faces)</label>-->
-<!--          <input type="radio" v-model="restoreFaces" :value="true" :disabled="locked"> 是-->
-<!--          <input type="radio" v-model="restoreFaces" :value="false" :disabled="locked"> 否-->
-<!--        </div>-->
-        <div class="form-group">
-          <label for="samplerIndex">采样器 </label>
-          <select id="samplerIndex" v-model="samplerIndex" :disabled="locked">
-            <option v-for="(item, index) in samplers" :key="item.name" :value="index">{{ item }}</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <div v-if="showSetWeights">
-            <h3>设置权重</h3>
-            <h4 v-if="promptList.length>0">正向</h4>
-            <div v-for="(item, index) in promptList" :key="index" class="weight-item">
-              <label>{{ item.prompt }}</label>
-              <input type="number" v-model.number="item.weight">
-            </div>
-            <h4 v-if="negativePromptList.length>0">负向</h4>
-            <div v-for="(item, index) in negativePromptList" :key="index" class="weight-item">
-              <label>{{ item.prompt }}</label>
-              <input type="number" v-model.number="item.weight">
-            </div>
-            <button @click="saveWeights">保存</button>
-          </div>
-          <button @click="toggleSetWeights"
-                  v-if="!showSetWeights && (promptList.length > 0 || negativePromptList.length > 0)">设置权重
-          </button>
-        </div>
-      </div>
+      </section>
 
-      <!-- Dialog for importing prompts -->
-      <div v-if="showDialog" class="dialog-overlay">
-        <div class="dialog">
-          <h3>{{ dialogType === 'positive' ? '导入正向提示词' : '导入负向提示词' }}</h3>
-          <textarea v-model="dialogInput" placeholder="请输入提示词，多个词用逗号分割"></textarea>
-          <div class="dialog-buttons">
-            <button @click="importPrompts">确定</button>
-            <button @click="closeDialog">取消</button>
+      <!-- ── 高清修复 ── -->
+      <section class="card hires-card">
+        <div class="card-header clickable" @click="toggleHiresFix">
+          <span class="section-label">🔍 高清修复 (Hires Fix)</span>
+          <div class="toggle-switch" :class="{ on: hiresFixEnabled }">
+            <div class="toggle-thumb"></div>
+          </div>
+        </div>
+        <transition name="hires-expand">
+          <div v-if="hiresFixEnabled" class="hires-params">
+            <div class="param-row">
+              <label>放大算法</label>
+              <select v-model="hiresUpscaler" :disabled="locked" class="param-select">
+                <option v-for="u in upscalers" :key="u" :value="u">{{ u }}</option>
+              </select>
+            </div>
+            <div class="param-row">
+              <label>放大倍数</label>
+              <div class="slider-group">
+                <input type="range" v-model.number="hiresScale" min="1" max="4" step="0.25" :disabled="locked" />
+                <span class="param-val">× {{ hiresScale.toFixed(2) }}</span>
+              </div>
+            </div>
+            <div class="hires-preview">
+              <span class="hires-label">输出尺寸</span>
+              <span class="hires-value">{{ Math.round(width * hiresScale) }} × {{ Math.round(height * hiresScale) }}</span>
+            </div>
+            <div class="param-row">
+              <label>修复步数 <small>（0 = 同主步数）</small></label>
+              <div class="slider-group">
+                <input type="range" v-model.number="hiresSteps" min="0" max="150" step="1" :disabled="locked" />
+                <span class="param-val">{{ hiresSteps === 0 ? 'Auto' : hiresSteps }}</span>
+              </div>
+            </div>
+            <div class="param-row">
+              <label>重绘强度</label>
+              <div class="slider-group">
+                <input type="range" v-model.number="hiresDenoising" min="0" max="1" step="0.05" :disabled="locked" />
+                <span class="param-val">{{ hiresDenoising.toFixed(2) }}</span>
+              </div>
+            </div>
+          </div>
+        </transition>
+      </section>
+
+
+
+    </div><!-- /panel-scroll -->
+
+    <!-- ── 导入弹窗 ── -->
+    <transition name="fade">
+      <div v-if="showDialog" class="dialog-overlay" @click.self="closeDialog">
+        <div class="dialog-box">
+          <p class="dialog-title">{{ dialogType === 'positive' ? '导入正向提示词' : '导入负向提示词' }}</p>
+          <p class="dialog-hint">格式：<code>(一个女孩:2.0),(美丽的:1.5),18岁</code></p>
+          <textarea v-model="dialogInput" placeholder="在此粘贴提示词…" class="dialog-ta"></textarea>
+          <div class="dialog-actions">
+            <button class="ghost-btn" @click="closeDialog">取消</button>
+            <button class="primary-btn" @click="importPrompts">确定导入</button>
           </div>
         </div>
       </div>
-    </div>
+    </transition>
   </div>
 </template>
-
 
 <script>
 import axios from "axios";
@@ -169,7 +249,7 @@ import url from "@/urlObj";
 import urlObj from "@/urlObj";
 
 export default {
-  name: 'AIImageGenerator',
+  name: 'AIForm',
   data() {
     return {
       prompt: '',
@@ -181,12 +261,15 @@ export default {
       checkpoint: '',
       loras: [],
       selectedLoras: [],
-      lor: '',
       vae: 'none',
-      imageSizes: ['1:1 512x512', '1:1 1024x1024', '2:3 512x768', '3:2 768x512', '4:3 1024x768', '3:4 768x1024', '16:9 1024x576', '9:16 576x1024', '1:2 512x1024', '2:1 1024x512'],
+      imageSizes: [
+        '1:1 512', '1:1 1024',
+        '2:3 512×768', '3:2 768×512',
+        '4:3 1024×768', '3:4 768×1024',
+        '16:9 1024×576', '9:16 576×1024',
+      ],
       width: 512,
       height: 768,
-      selectedTab: 0,
       file: null,
       imageSrc: null,
       showSetWeights: false,
@@ -203,747 +286,646 @@ export default {
       showDialog: false,
       dialogInput: '',
       dialogType: '',
-      admin:true
+      admin: true,
+      // 高清修复
+      hiresFixEnabled: false,
+      hiresUpscaler: 'Latent',
+      hiresScale: 2,
+      hiresSteps: 0,
+      hiresDenoising: 0.7,
+      upscalers: [
+        'Latent', 'Latent (antialiased)', 'Latent (bicubic)',
+        'Latent (bicubic antialiased)', 'Latent (nearest)', 'Latent (nearest-exact)',
+        'None', 'Lanczos', 'Nearest', 'ESRGAN_4x', 'LDSR',
+        'R-ESRGAN 4x+', 'R-ESRGAN 4x+ Anime6B', 'ScuNET GAN', 'ScuNET PSNR', 'SwinIR 4x'
+      ],
     };
   },
   created() {
-    this.getModels()
-    this.getLoras()
-    this.getCurrentModel()
-    this.getSamplers()
+    this.getModels();
+    this.getLoras();
+    this.getCurrentModel();
+    this.getSamplers();
   },
   mounted() {
-    this.reset()
+    this.reset();
   },
   watch: {
-    width(newVal, oldVal) {
-      this.triggerAnimation('width');
-    },
-    height(newVal, oldVal) {
-      this.triggerAnimation('height');
-    },
-    prompt: {
-      handler() {
-        this.updatePromptList();
-      },
-    },
-    negativePrompt: {
-      handler() {
-        this.updateNegativePromptList();
-      },
-    },
+    width()  { this.triggerAnimation('width'); },
+    height() { this.triggerAnimation('height'); },
+    prompt() { this.updatePromptList(); },
+    negativePrompt() { this.updateNegativePromptList(); },
     $data: {
-      handler(newVal) {
-        // 复制一份
-        const copy = {
-          prompt:newVal.prompt,
-          negativePrompt:newVal.negativePrompt,
-          width:newVal.width,
-          height:newVal.height,
-          steps:newVal.steps,
-          cfgScale:newVal.cfgScale,
-          seed:newVal.seed,
-          samplerIndex:newVal.samplerIndex,
-          denoisingStrength:newVal.denoisingStrength,
-        };
-        // 删除不需要持久化的属性
-
-        // 存储过滤后的数据
-        localStorage.setItem("myAppData", JSON.stringify(copy));
+      handler(v) {
+        localStorage.setItem("myAppData", JSON.stringify({
+          prompt: v.prompt, negativePrompt: v.negativePrompt,
+          width: v.width, height: v.height, steps: v.steps,
+          cfgScale: v.cfgScale, seed: v.seed, samplerIndex: v.samplerIndex,
+          denoisingStrength: v.denoisingStrength, restoreFaces: v.restoreFaces,
+          hiresFixEnabled: v.hiresFixEnabled, hiresUpscaler: v.hiresUpscaler,
+          hiresScale: v.hiresScale, hiresSteps: v.hiresSteps, hiresDenoising: v.hiresDenoising,
+        }));
       },
       deep: true
     }
-
   },
   methods: {
-    // 锁定/解锁
-    lockInfo() {
-      this.locked = !this.locked;
-    },
-    // 拖拽
-    onDrop(event) {
-      if (this.locked) return;
-      const files = event.dataTransfer.files;
-      if (files.length > 0) {
-        this.file = files[0];
-        this.previewImage(this.file);
-      }
+    lockInfo() { this.locked = !this.locked; },
+    toggleRestoreFaces() { if (!this.locked) this.restoreFaces = !this.restoreFaces; },
+    toggleHiresFix() { if (!this.locked) this.hiresFixEnabled = !this.hiresFixEnabled; },
+    randomSeed() { this.seed = Math.floor(Math.random() * 2147483647); },
 
+    isSizeActive(size) {
+      const m = size.match(/(\d+)[×x](\d+)/);
+      if (m) return this.width === parseInt(m[1]) && this.height === parseInt(m[2]);
+      const s = size.match(/1:1 (\d+)/);
+      if (s) return this.width === parseInt(s[1]) && this.height === parseInt(s[1]);
+      return false;
     },
-    // 选择文件
-    onFileChange(event) {
+
+    onDrop(e) {
       if (this.locked) return;
-      const files = event.target.files;
-      if (files.length > 0) {
-        this.file = files[0];
-        this.previewImage(this.file);
-      }
+      const f = e.dataTransfer.files[0];
+      if (f) { this.file = f; this.previewImage(f); }
     },
-    // 预览图片
+    onFileChange(e) {
+      if (this.locked) return;
+      const f = e.target.files[0];
+      if (f) { this.file = f; this.previewImage(f); }
+    },
     previewImage(file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        this.imageSrc = e.target.result;
-      };
+      reader.onload = (e) => { this.imageSrc = e.target.result; };
       reader.readAsDataURL(file);
-      //设置宽高为图片的宽高
       const img = new Image();
       img.src = URL.createObjectURL(file);
-      img.onload = () => {
-        this.width = img.width;
-        this.height = img.height;
-      };
+      img.onload = () => { this.width = img.width; this.height = img.height; };
     },
-    // 切换选项卡
-    selectTab(index) {
-      if (this.locked) return;
-      this.selectedTab = index;
-    },
-    // 选择图片尺寸
+
     selectImageSize(size) {
       if (this.locked) return;
-      const dimensions = size.match(/(\d+)x(\d+)/);
-      if (dimensions) {
-        this.width = parseInt(dimensions[1], 10);
-        this.height = parseInt(dimensions[2], 10);
-      }
+      let m = size.match(/(\d+)[×x](\d+)/);
+      if (m) { this.width = parseInt(m[1]); this.height = parseInt(m[2]); return; }
+      m = size.match(/1:1 (\d+)/);
+      if (m) { this.width = this.height = parseInt(m[1]); }
     },
-    // 设置权重
-    toggleSetWeights() {
-      this.showSetWeights = !this.showSetWeights;
-    },
-    // 保存权重
+
+    toggleSetWeights() { this.showSetWeights = !this.showSetWeights; },
     saveWeights() {
-      this.promptList.forEach(item => {
-        item.weight = parseFloat(item.weight);
-      });
-      this.negativePromptList.forEach(item => {
-        item.weight = parseFloat(item.weight);
-      });
+      this.promptList.forEach(i => { i.weight = parseFloat(i.weight); });
+      this.negativePromptList.forEach(i => { i.weight = parseFloat(i.weight); });
       this.showSetWeights = false;
     },
-    // 更新提示词列表
+
     updatePromptList() {
-      const prompts = this.prompt.split(/[，,]/);
-
-      // 遍历每个分割后的提示词
-      prompts.forEach(newPrompt => {
-        // 检查新的提示词是否已经存在于 promptList 中
-        const existingPromptIndex = this.promptList.findIndex(item => item.prompt === newPrompt);
-
-        if (existingPromptIndex === -1) {
-          // 如果新的提示词在 promptList 中不存在，则添加，设置默认权重为 1.0
-          this.promptList.push({ prompt: newPrompt, weight: 1.0 });
-        } else {
-          // 如果新的提示词已经存在，可以选择更新权重或者跳过
-          // 可以根据需要更新权重：this.promptList[existingPromptIndex].weight = 1.0;
-        }
-      });
-
-      // 删除 promptList 中不存在于 prompts 数组中的提示词
+      const parts = this.prompt.split(/[，,]/);
+      parts.forEach(p => { if (!this.promptList.find(x => x.prompt === p)) this.promptList.push({ prompt: p, weight: 1.0 }); });
       for (let i = this.promptList.length - 1; i >= 0; i--) {
-        const promptInList = this.promptList[i].prompt;
-        if (!prompts.includes(promptInList)) {
-          this.promptList.splice(i, 1);
-        }
+        if (!parts.includes(this.promptList[i].prompt)) this.promptList.splice(i, 1);
       }
-
-      // 可选步骤：根据提示词或权重对 promptList 进行排序
-      // 例如，按照提示词的字母顺序排序
-      this.promptList.sort((a, b) => (a.prompt > b.prompt) ? 1 : -1);
+      this.promptList.sort((a, b) => a.prompt > b.prompt ? 1 : -1);
     },
-    // 更新负向提示词列表
     updateNegativePromptList() {
-      const negativePrompts = this.negativePrompt.split(/[，,]/).map(str => ({prompt: str.trim(), weight: 0.5}));
-      this.negativePromptList = negativePrompts.filter(item => item.prompt !== '');
+      this.negativePromptList = this.negativePrompt.split(/[，,]/)
+          .map(s => ({ prompt: s.trim(), weight: 0.5 })).filter(x => x.prompt);
     },
-    // 触发动画效果
-    triggerAnimation(property) {
-      if (property === 'width') {
-        this.animateWidth = true;
-        setTimeout(() => {
-          this.animateWidth = false;
-        }, 1000);
-      } else if (property === 'height') {
-        this.animateHeight = true;
-        setTimeout(() => {
-          this.animateHeight = false;
-        }, 1000);
-      }
+
+    triggerAnimation(prop) {
+      if (prop === 'width')  { this.animateWidth  = true; setTimeout(() => { this.animateWidth  = false; }, 600); }
+      else                   { this.animateHeight = true; setTimeout(() => { this.animateHeight = false; }, 600); }
     },
-    // LORA选择
-    loraChange(item) {
-      console.log(this.selectedLoras.indexOf(item))
-      if (this.selectedLoras.indexOf(item) > -1) {
-        this.selectedLoras = this.selectedLoras.filter(lora => lora !== item);
-      } else {
-        this.selectedLoras.push(item);
-      }
+
+    loraChange(name) {
+      const i = this.selectedLoras.indexOf(name);
+      if (i > -1) this.selectedLoras.splice(i, 1); else this.selectedLoras.push(name);
     },
-    // 发送请求
+
     generateImage() {
-      //如果存在图片则发送图生图请求，否则发送文生图请求
-      this.$notify.info("等待请求提交")
-      if (this.file != null) {
-        this.imageToImage()
-      } else {
-        this.textToImage()
-      }
+      this.$notify.info("等待请求提交");
+      this.file ? this.imageToImage() : this.textToImage();
     },
-    // 发送文生图请求
+
     textToImage() {
-      // {
-      //   "prompts": [
-      //   {
-      //     "prompt": "string",
-      //     "weight": 0
-      //   }
-      // ],
-      //     "negativePrompts": [
-      //   {
-      //     "prompt": "string",
-      //     "weight": 0
-      //   }
-      // ],
-      //     "steps": 0,
-      //     "width": 0,
-      //     "height": 0,
-      //     "cfgScale": 0,
-      //     "seed": 0,
-      //     "restoreFaces": true,
-      //     "samplerIndex": "string"
-      // }
-      let loras = []
-      if (this.selectedLoras.length > 0) {
-        this.selectedLoras.forEach(item => {
-          loras.push({
-            name: item,
-            weight: 1.0
-          })
-        })
-      }
+      const loras = this.selectedLoras.map(name => ({ name, weight: 1.0 }));
       const data = {
-        prompts: this.promptList,
-        negativePrompts: this.negativePromptList,
-        steps: this.steps,
-        width: this.width,
-        height: this.height,
-        cfgScale: this.cfgScale,
-        seed: this.seed,
-        restoreFaces: this.restoreFaces,
-        samplerIndex: this.samplers[this.samplerIndex],
-        loras: loras
+        prompts: this.promptList, negativePrompts: this.negativePromptList,
+        steps: this.steps, width: this.width, height: this.height,
+        cfgScale: this.cfgScale, seed: this.seed, restoreFaces: this.restoreFaces,
+        samplerIndex: this.samplers[this.samplerIndex], loras,
+        enableHiresFix: this.hiresFixEnabled,
+        ...(this.hiresFixEnabled && {
+          hiresUpscaler: this.hiresUpscaler, hiresScale: this.hiresScale,
+          hiresSteps: this.hiresSteps, hiresDenoising: this.hiresDenoising,
+        }),
       };
-      axios.post(url.aiImage.texttoimage, data).then(
-          (resp) => {
-            this.$emit("submit", resp.data);
-          }
-      ).catch((err)=>{
-        console.log(err)
-        this.$notify.error("提交失败")
-      })
-      this.$notify.success("提交成功, 积分已扣除5")
+      axios.post(url.aiImage.texttoimage, data)
+          .then(resp => { this.$emit("submit", resp.data); })
+          .catch(err => { console.error(err); this.$notify.error("提交失败"); });
+      this.$notify.success("提交成功，积分已扣除 5");
     },
-    // 发送图生图请求
+
     imageToImage() {
-      // {
-      //   private List<Prompt> prompts;           // 正向提示词
-      //   private List<Prompt> negativePrompts;   // 负向提示词
-      //   private Integer steps;                  // 采样步数
-      //   private Integer width;                  // 宽度
-      //   private Integer height;                 // 高度
-      //   private Integer cfgScale;               // 提示词引导系数
-      //   private Long seed;                   // 随机种子
-      //   private Boolean restoreFaces;           // 是否还原人脸
-      //   private String samplerIndex;            // 采样器
-      //   private Double denoisingStrength;
-      //   private Integer resizeMode;
-      // }
       const data = {
-        prompts: this.promptList,
-        negativePrompts: this.negativePromptList,
-        steps: this.steps,
-        width: this.width,
-        height: this.height,
-        cfgScale: this.cfgScale,
-        seed: this.seed,
-        restoreFaces: this.restoreFaces,
+        prompts: this.promptList, negativePrompts: this.negativePromptList,
+        steps: this.steps, width: this.width, height: this.height,
+        cfgScale: this.cfgScale, seed: this.seed, restoreFaces: this.restoreFaces,
         samplerIndex: this.samplers[this.samplerIndex],
-        denoisingStrength: this.denoisingStrength,
-        resizeMode: this.resizeMode,
-      }
+        denoisingStrength: this.denoisingStrength, resizeMode: this.resizeMode,
+      };
       const formData = new FormData();
       formData.append("image", this.file);
       formData.append("data", JSON.stringify(data));
-      axios.post(url.aiImage.imagetoimage, formData).then(
-          (resp) => {
-            this.$emit("submit", resp.data);
-          }
-      ).catch((err)=>{
-        console.log(err)
-        this.$notify.error("提交失败")
-      })
-      this.$notify.success("提交成功, 积分已扣除10")
+      axios.post(url.aiImage.imagetoimage, formData)
+          .then(resp => { this.$emit("submit", resp.data); })
+          .catch(err => { console.error(err); this.$notify.error("提交失败"); });
+      this.$notify.success("提交成功，积分已扣除 10");
     },
-    //获取模型列表
+
     getModels() {
-      axios.get(url.setting.modelList).then(
-          (resp) => {
-            let r = []
-            for (let i = 0; i < resp.data.length; i++) {
-              r.push(resp.data[i].title)
-            }
-            this.checkpoints = r
-          }
-      )
+      axios.get(url.setting.modelList).then(resp => {
+        const data = Array.isArray(resp.data) ? resp.data : resp.data?.data || [];
+        this.checkpoints = data.map(i => ({ title: i.title, imagePath: i.imagePath || null }));
+      }).catch(err => { console.error('Failed to load models:', err); });
     },
-    //获取LORA列表
     getLoras() {
-      axios.get(url.setting.loraList).then(
-          (resp) => {
-            this.loras = resp.data
-          }
-      )
+      axios.get(url.setting.loraList).then(resp => {
+        this.loras = Array.isArray(resp.data) ? resp.data : resp.data?.data || [];
+      }).catch(err => { console.error('Failed to load loras:', err); });
     },
-    // 获取当前模型
     getCurrentModel() {
-      axios.get(url.setting.currentModel).then(
-          (resp) => {
-            this.checkpoint = resp.data
-          }
-      )
+      axios.get(url.setting.currentModel).then(resp => {
+        this.checkpoint = resp.data;
+      }).catch(err => { console.error('Failed to load current model:', err); });
     },
-    // 获取采样器列表
     getSamplers() {
-      axios.get(url.setting.samplerList).then(
-          (resp) => {
-            let r = []
-            for (let i = 0; i < resp.data.length; i++) {
-              r.push(resp.data[i].name)
-            }
-            this.samplers = r
-          }
-      )
+      axios.get(url.setting.samplerList).then(resp => {
+        const data = Array.isArray(resp.data) ? resp.data : resp.data?.data || [];
+        this.samplers = data.map(i => i.name);
+      }).catch(err => { console.error('Failed to load samplers:', err); });
     },
+    selectCheckpoint(title) { this.checkpoint = title; this.changeModel(title); },
     changeModel(model) {
-      console.log(model)
-      axios.post(urlObj.setting.updateModel, {
-        title: model
-      }).then(() => {
-        this.getCurrentModel()
-      }).catch(
-          (error) => {
-            console.log(error)
-          }
-      )
+      axios.post(urlObj.setting.updateModel, { title: model })
+          .then(() => { this.getCurrentModel(); }).catch(err => { console.error(err); });
     },
-    //清理图片
-    clearImage() {
-      this.file = null;
-      this.imageSrc = null;
-      this.width = 512;
-      this.height = 768;
-    },
-    showImportDialog(type) {
-      this.locked=true;
-      this.dialogType = type;
-      this.dialogInput = '';
-      this.showDialog = true;
-    },
+    clearImage() { this.file = null; this.imageSrc = null; this.width = 512; this.height = 768; },
+
+    showImportDialog(type) { this.locked = true; this.dialogType = type; this.dialogInput = ''; this.showDialog = true; },
     importPrompts() {
-      // demo: "(一个女孩:2.0),(美丽的:1.5),18岁"  --》 prompts [{prompt: "一个女孩", weight: 2.0}, {prompt: "美丽的", weight: 1.5}, {prompt: "18岁", weight: 1.0}]
-      let prompts = this.dialogInput.split(',');
-      for (let i = 0; i < prompts.length; i++) {
-        let prompt = prompts[i].trim();
-        let weight = 1.0;
-        //如果包含括号
-        if (prompt.indexOf('(') > -1 && prompt.indexOf(')') > -1) {
-          let str = prompt.substring(prompt.indexOf('(') + 1, prompt.indexOf(')'));
-          //通过冒号分割出 提示词和权重
-          let words = str.split(':');
-          if (words.length > 1) {
-            prompt = words[0].trim();
-            weight = Number(words[1].trim());
-          } else {
-            prompt = words[0].trim();
-          }
+      this.dialogInput.split(',').forEach(raw => {
+        let p = raw.trim(), weight = 1.0;
+        if (p.includes('(') && p.includes(')')) {
+          const inner = p.slice(p.indexOf('(') + 1, p.indexOf(')'));
+          const parts = inner.split(':');
+          p = parts[0].trim();
+          if (parts.length > 1) weight = parseFloat(parts[1]) || 1.0;
         }
-        //prompt添加到文本域中
-        this.prompt+=prompt+","
-        this.promptList.push({prompt: prompt, weight: weight});
-        console.log(this.promptList)
-      }
+        if (!p) return;
+        if (this.dialogType === 'positive') {
+          this.prompt += (this.prompt ? ',' : '') + p;
+          this.promptList.push({ prompt: p, weight });
+        } else {
+          this.negativePrompt += (this.negativePrompt ? ',' : '') + p;
+          this.negativePromptList.push({ prompt: p, weight });
+        }
+      });
       this.closeDialog();
     },
-    closeDialog() {
-      this.showDialog = false;
-      this.dialogInput = '';
-      this.dialogType = '';
-      this.locked=false;
-    },
-    //属性还原
+    closeDialog() { this.showDialog = false; this.dialogInput = ''; this.dialogType = ''; this.locked = false; },
     reset() {
-      const savedData = localStorage.getItem("myAppData");
-      if (savedData) {
-        Object.assign(this.$data, JSON.parse(savedData));
-      }
+      const saved = localStorage.getItem("myAppData");
+      if (saved) Object.assign(this.$data, JSON.parse(saved));
     }
-  },
+  }
 };
 </script>
 
 <style scoped>
-/* Custom scrollbar styles */
-.scroll-container {
-  position: relative;
-  height: 100%;
-  overflow-y: auto; /* Enable vertical scrolling */
-  padding-right: 20px; /* Add padding to prevent scrollbar from overlapping content */
-}
+/* ══════════════════════════════════════════
+   CSS 变量定义在 .ai-panel 上（不用 :root）
+   scoped 样式中 :root 会被 Vue 加上 hash
+   导致变量无法生效，必须放在组件根元素上
+══════════════════════════════════════════ */
+.ai-panel {
+  /* 颜色 */
+  --bg0:     #161618;
+  --bg1:     #1e1e21;
+  --bg2:     #28282d;
+  --bg3:     #323238;
+  --line:    rgba(255,255,255,0.07);
+  --accent:  #7c6af7;
+  --accent-d: rgba(124,106,247,0.15);
+  --accent-g: rgba(124,106,247,0.35);
+  --danger:  #e05c5c;
+  --t1: #f0f0f2;
+  --t2: #a0a0ae;
+  --t3: #62626e;
+  /* 尺寸 */
+  --r-s: 6px;
+  --r-m: 10px;
+  --r-l: 14px;
+  --font: 'Inter', 'PingFang SC', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', 'Fira Code', monospace;
 
-.AIForm ::-webkit-scrollbar {
-  width: 10px;
-  background-color: #f1f1f1;
-  border-radius: 8px;
-}
-.AIForm ::-webkit-scrollbar-thumb {
-  background-color: #888;
-  border-radius: 8px;
-}
-
-.AIForm ::-webkit-scrollbar-track {
-  background-color: #f1f1f1;
-  border-radius: 8px;
-}
-
-
-.container {
-  width: 25%;
-  margin: 0 auto;
-  padding: 20px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  background-color: #2d2d2d;
-  color: #fff;
-  height: 100vh; /* Set the height to the viewport height */
-  overflow: hidden; /* Prevent overflow from the container */
-  box-sizing: border-box;
-}
-
-.scroll-container {
-  height: 100%;
-  overflow-y: auto; /* Enable vertical scrolling */
-  padding-right: 20px; /* Add padding to prevent scrollbar from overlapping content */
-}
-
-.subBut {
-  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
-}
-
-.subBut:active  {
-  background-color: #fff;
-  color: #2d2d2d;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.lock-button {
-  background: none;
-  border: none;
-  color: #fff;
-  cursor: url("@/assets/鼠标指针 (1).svg") ,auto !important;
-  transition: transform 0.1s ease-in-out;
-}
-
-.lock-button:active {
-  transform: scale(0.95);
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-label {
-  display: block;
-  margin-bottom: 5px;
-}
-
-textarea, input, select, button {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
-  border: 1px solid #444;
-  background-color: #3d3d3d;
-  color: #fff;
-  box-sizing: border-box;
-}
-
-textarea {
-  max-width: 100%;
-  min-width: 100%;
-  min-height: 40px;
-}
-
-.upload-box {
-  width: 100%;
-  height: 100px;
-  border: 2px dashed #444;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #888;
-  position: relative;
-}
-
-.file-input {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: url("@/assets/鼠标指针 (1).svg") ,auto !important;
-}
-
-.image-preview {
-  margin-top: 10px;
-  width: 100%;
-  height: 100px;
-  max-height: 100px;
+  /* 布局 */
+  width: 100%;      /* 由父级 .sidebar(320px) 控制 */
+  height: 100%;     /* 撑满父级高度 */
+  background: var(--bg0);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: 13px;
   overflow: hidden;
-}
-
-.image-preview img {
-  display: block;
-  margin: auto;
-  height: 100%;
-  max-width: 100%;
-  object-fit: contain;
-  border: 1px solid #444;
-}
-
-.tabs {
-  display: flex;
-  justify-content: space-between;
-}
-
-.tab {
-  flex: 1;
-  background-color: #444;
-  color: #fff;
-  border: none;
-  padding: 10px;
-  cursor: url("@/assets/鼠标指针 (1).svg") ,auto !important;
-  transition: transform 0.1s ease-in-out;
-}
-
-.tab:active {
-  transform: scale(0.95);
-}
-
-.settings {
-  margin-top: 20px;
-}
-
-.image-sizes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.image-sizes button {
-  flex: 1;
-  background-color: #444;
-  color: #fff;
-  border: none;
-  padding: 10px;
-  cursor: url("@/assets/鼠标指针 (1).svg") ,auto !important;
-  transition: transform 0.1s ease-in-out;
-}
-
-.image-sizes button:active {
-  transform: scale(0.95);
-}
-
-.inline-group {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.inline-item {
-  flex: 1;
-  position: relative;
-}
-
-.animate input {
-  animation: size-change 1s forwards;
-}
-
-@keyframes size-change {
-  from {
-    transform: scale(1.2);
-  }
-  to {
-    transform: scale(1);
-  }
-}
-
-.weight-item {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.weight-item label {
-  width: 80px;
-}
-
-.weight-item input {
-  width: 80px;
-  margin-left: 10px;
-}
-
-/* 1. 容器样式：固定大小 + 滚动条 */
-.loras-container {
-  max-height: 500px; /* 限制盒子最大高度，可以根据需要调大一点 */
-  overflow-y: auto;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr); /* 两列布局 */
-  gap: 15px;
-  padding: 10px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background-color: #f9fbfc; /* 加一点淡淡的背景色区分 */
-  /* ★ 关键：防止同一行的图片高度不同时被强制拉伸 */
-  align-items: start;
-}
-
-/* 滚动条美化 */
-.loras-container::-webkit-scrollbar {
-  width: 6px;
-}
-.loras-container::-webkit-scrollbar-thumb {
-  background: #c0c4cc;
-  border-radius: 3px;
-}
-
-/* 2. 单个卡片 */
-.loras-item {
   display: flex;
   flex-direction: column;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.2s;
-  background-color: #fff;
+  position: relative;
 }
 
-.loras-item:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-/* 选中时的反馈 */
-.loras-item:has(.lora-item-checkbox:checked) {
-  border-color: #409eff;
-  background-color: #f0f7ff;
-}
-
-/* 3. 图片样式：★等比例展示完整大图★ */
-.lora-image {
-  width: 100%;
-  height: auto; /* 高度根据图片比例自动撑开，绝对不裁剪 */
-  display: block;
-}
-
-/* 无图片时的占位 */
-.lora-image-placeholder {
-  width: 100%;
-  height: 150px;
-  background-color: #f5f7fa;
-  color: #909399;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-}
-
-/* 4. 底部文字和复选框 */
-.lora-info {
-  display: flex;
-  align-items: flex-start; /* 文本变多时，顶部对齐更美观 */
-  justify-content: space-between;
-  padding: 10px;
-}
-
-/* Lora名称：★允许多行显示完整名字★ */
-.lora-name {
+/* ── 滚动区 ── */
+.panel-scroll {
   flex: 1;
-  font-size: 13px;
-  color: #333;
-  margin-right: 10px;
-  line-height: 1.4; /* 增加行高，多行文本更好看 */
-
-  /* 去掉 nowrap，改为允许换行 */
-  white-space: normal;
-  word-wrap: break-word; /* 防止长串英文把盒子撑破 */
-  word-break: break-all;
-}
-
-/* 复选框稍微下移居中 */
-.lora-item-checkbox {
-  margin-top: 2px;
-  cursor: pointer;
-  flex-shrink: 0; /* 防止复选框被名字挤压变形 */
-  width: 16px;
-  height: 16px;
-}
-
-.dialog-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+  padding: 14px 14px 60px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.dialog {
-  background: #2d2d2d;
-  padding: 20px;
-  border-radius: 5px;
-  width: 400px;
-  margin: auto;
-}
-
-.dialog-buttons {
-  display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
   gap: 10px;
 }
+.panel-scroll::-webkit-scrollbar       { width: 4px; }
+.panel-scroll::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
 
-.dialog-buttons button {
+/* ── 顶部栏 ── */
+.panel-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0 4px;
+}
+.panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.icon-spark { color: var(--accent); font-style: normal; margin-right: 5px; }
+
+.lock-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   padding: 5px 10px;
+  border-radius: var(--r-s);
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  color: var(--t2);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-button{
-  cursor: url("@/assets/鼠标指针 (1).svg") ,auto !important;
+.lock-btn.locked { border-color: var(--accent); color: var(--accent); background: var(--accent-d); }
+
+/* ── 生成按钮 ── */
+.generate-btn {
+  width: 100%;
+  padding: 13px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-m);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 0.15s, transform 0.1s;
 }
-select{
-  cursor: url("@/assets/鼠标指针 (1).svg") ,auto !important;
+.generate-btn:hover:not(:disabled) { opacity: 0.9; }
+.generate-btn:active:not(:disabled) { transform: scale(0.98); }
+.generate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── 卡片 ── */
+.card {
+  background: var(--bg1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-l);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-option{
-  cursor: url("@/assets/鼠标指针 (1).svg") ,auto !important;
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
-input{
-  cursor: url("@/assets/鼠标指针 (1).svg") ,auto !important;
+.card-header.clickable { cursor: pointer; user-select: none; }
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--t2);
 }
-.dialog-buttons button:active{
-  transform: scale(0.95);
+.row-gap { display: flex; gap: 6px; }
+
+/* ── 通用按钮 ── */
+.ghost-btn {
+  padding: 5px 10px;
+  border-radius: var(--r-s);
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  color: var(--t2);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.ghost-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.ghost-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.ghost-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+.primary-btn {
+  padding: 8px 16px;
+  border-radius: var(--r-s);
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.primary-btn:hover { opacity: 0.88; }
+
+/* ── 提示词 ── */
+.prompt-ta {
+  width: 100%;
+  min-height: 72px;
+  padding: 10px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  color: var(--t1);
+  font-size: 12.5px;
+  font-family: var(--font);
+  resize: vertical;
+  line-height: 1.6;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+.prompt-ta:focus { outline: none; border-color: var(--accent); }
+.prompt-ta.negative { min-height: 52px; }
+.prompt-ta::placeholder { color: var(--t3); }
+.prompt-ta:disabled { opacity: 0.5; }
+
+/* 权重 */
+.weight-panel {
+  background: var(--bg2);
+  border-radius: var(--r-m);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.weight-title { font-size: 11px; color: var(--accent); font-weight: 700; text-transform: uppercase; }
+.weight-row   { display: flex; align-items: center; gap: 8px; }
+.weight-name  { flex: 1; font-size: 12px; color: var(--t2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.weight-input { width: 64px; padding: 4px 6px; background: var(--bg3); border: 1px solid var(--line); border-radius: var(--r-s); color: var(--t1); font-size: 12px; text-align: right; }
+
+/* ── 图生图 / 上传 ── */
+.drop-zone {
+  border: 1.5px dashed var(--bg3);
+  border-radius: var(--r-m);
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+  cursor: pointer;
+}
+.drop-zone:hover { border-color: var(--accent); }
+.drop-zone.has-image { border-style: solid; }
+.file-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.drop-hint  { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--t3); font-size: 12px; pointer-events: none; }
+.preview-img { width: 100%; max-height: 160px; object-fit: contain; display: block; }
+.sub-params { display: flex; flex-direction: column; gap: 10px; }
+
+/* ── 参数行 ── */
+.param-row { display: flex; flex-direction: column; gap: 6px; }
+.param-row label { font-size: 11.5px; color: var(--t2); font-weight: 500; }
+.param-row label small { color: var(--t3); font-weight: 400; }
+.inline-params { display: flex; gap: 10px; }
+.param-row.half { flex: 1; }
+
+.slider-group { display: flex; align-items: center; gap: 10px; }
+.slider-group input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+.param-val {
+  font-size: 12px; font-weight: 700; color: var(--accent);
+  min-width: 46px; text-align: right; font-family: var(--mono);
 }
 
+.param-input {
+  width: 100%; padding: 7px 10px;
+  background: var(--bg2); border: 1px solid var(--line);
+  border-radius: var(--r-s); color: var(--t1); font-size: 13px;
+  transition: border-color 0.15s; box-sizing: border-box;
+}
+.param-input:focus { outline: none; border-color: var(--accent); }
+.param-input:disabled { opacity: 0.5; }
+
+.param-select {
+  width: 100%; padding: 7px 28px 7px 10px;
+  background: var(--bg2); border: 1px solid var(--line);
+  border-radius: var(--r-s); color: var(--t1); font-size: 13px;
+  cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2362626e' d='M5 6L0 0h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  box-sizing: border-box;
+}
+.param-select:disabled { opacity: 0.5; }
+
+.seed-group { display: flex; gap: 6px; }
+.seed-group .param-input { flex: 1; }
+.seed-group .ghost-btn { padding: 7px 10px; font-size: 14px; }
+
+/* 尺寸快选 */
+.size-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.size-btn {
+  padding: 6px 4px; background: var(--bg2);
+  border: 1px solid var(--line); border-radius: var(--r-s);
+  color: var(--t2); font-size: 11px; cursor: pointer; text-align: center; transition: all 0.15s;
+}
+.size-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.size-btn.active { background: var(--accent-d); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.size-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.animate .param-input { animation: pulse-in 0.5s ease; }
+@keyframes pulse-in {
+  0%   { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-g); }
+  100% { border-color: var(--line);   box-shadow: none; }
+}
+
+/* ── 高清修复 ── */
+.hires-card { border-color: rgba(124,106,247,0.2); }
+.toggle-switch {
+  width: 36px; height: 20px; border-radius: 10px;
+  background: var(--bg3); position: relative;
+  transition: background 0.2s; border: 1px solid var(--line); flex-shrink: 0;
+}
+.toggle-switch.on { background: var(--accent); border-color: var(--accent); }
+.toggle-thumb {
+  position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; transition: transform 0.2s;
+}
+.toggle-switch.on .toggle-thumb { transform: translateX(16px); }
+.hires-params { display: flex; flex-direction: column; gap: 10px; padding-top: 4px; border-top: 1px solid var(--line); }
+.hires-preview {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--accent-d); border: 1px solid var(--accent-g);
+  border-radius: var(--r-s); padding: 8px 12px;
+}
+.hires-label { font-size: 11px; color: var(--accent); font-weight: 700; text-transform: uppercase; }
+.hires-value { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--t1); }
+.hires-expand-enter-active, .hires-expand-leave-active {
+  transition: max-height 0.3s ease, opacity 0.25s ease; max-height: 600px; overflow: hidden;
+}
+.hires-expand-enter-from, .hires-expand-leave-to { max-height: 0; opacity: 0; }
+
+/* ── 模型卡片 ── */
+.current-tag {
+  font-size: 11px; padding: 2px 8px;
+  background: var(--accent-d); border: 1px solid var(--accent-g);
+  border-radius: 99px; color: var(--accent);
+  max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.model-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-height: 440px; overflow-y: auto; }
+.model-grid::-webkit-scrollbar { width: 3px; }
+.model-grid::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+
+@media (max-width: 360px) {
+  .model-grid { grid-template-columns: 1fr; }
+}
+
+.model-card {
+  border: 1.5px solid var(--line); border-radius: var(--r-m); overflow: hidden;
+  cursor: pointer; display: flex; flex-direction: column; background: var(--bg2);
+  transition: border-color 0.15s, transform 0.1s;
+}
+.model-card:hover { border-color: var(--accent); }
+.model-card:active { transform: scale(0.97); }
+.model-card.selected { border-color: var(--accent); background: var(--accent-d); }
+.model-img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+.model-placeholder {
+  width: 100%; aspect-ratio: 1; background: var(--bg3);
+  display: flex; align-items: center; justify-content: center; font-size: 24px;
+}
+.model-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 8px; gap: 4px;
+}
+.model-name { flex: 1; font-size: 11px; color: var(--t2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-card.selected .model-name { color: var(--accent); }
+.model-radio { width: 13px; height: 13px; flex-shrink: 0; accent-color: var(--accent); }
+
+/* ── LoRA ── */
+.badge {
+  font-size: 11px; padding: 2px 8px;
+  background: var(--bg2); border: 1px solid var(--line);
+  border-radius: 99px; color: var(--t3);
+}
+.lora-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-height: 440px; overflow-y: auto; }
+.lora-grid::-webkit-scrollbar { width: 3px; }
+.lora-grid::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+
+@media (max-width: 360px) {
+  .lora-grid { grid-template-columns: 1fr; }
+}
+
+.lora-card {
+  min-height: 165px;
+  border: 1.5px solid var(--line); border-radius: var(--r-m); overflow: hidden;
+  cursor: pointer; display: flex; flex-direction: column; background: var(--bg2);
+  transition: border-color 0.15s, transform 0.1s;
+}
+.lora-card:hover { border-color: var(--accent); }
+.lora-card:active { transform: scale(0.97); }
+.lora-card.selected { border-color: var(--accent); background: var(--accent-d); }
+.lora-img-wrap {
+  width: 100%; aspect-ratio: 1; overflow: hidden;
+  background: var(--bg3); display: flex; align-items: center; justify-content: center;
+}
+.lora-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lora-placeholder {
+  width: 100%; height: 90px; background: var(--bg3);
+  display: flex; align-items: center; justify-content: center; font-size: 22px;
+}
+.lora-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 8px; gap: 4px;
+}
+.lora-name { flex: 1; font-size: 11px; color: var(--t2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lora-card.selected .lora-name { color: var(--accent); }
+.lora-check { width: 13px; height: 13px; flex-shrink: 0; accent-color: var(--accent); }
+
+/* ── 弹窗 ── */
+.dialog-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; backdrop-filter: blur(2px);
+}
+.dialog-box {
+  width: 88%; background: var(--bg1);
+  border: 1px solid var(--line); border-radius: var(--r-l);
+  padding: 20px; display: flex; flex-direction: column; gap: 12px;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.5);
+}
+.dialog-title { font-size: 14px; font-weight: 600; color: var(--t1); }
+.dialog-hint  { font-size: 11.5px; color: var(--t3); line-height: 1.5; }
+.dialog-hint code {
+  font-family: var(--mono); font-size: 11px;
+  background: var(--bg3); padding: 1px 5px; border-radius: 4px; color: var(--accent);
+}
+.dialog-ta {
+  width: 100%; min-height: 100px; padding: 10px;
+  background: var(--bg2); border: 1px solid var(--line);
+  border-radius: var(--r-m); color: var(--t1);
+  font-size: 12.5px; font-family: var(--font); resize: vertical; line-height: 1.6;
+  box-sizing: border-box;
+}
+.dialog-ta:focus { outline: none; border-color: var(--accent); }
+.dialog-ta::placeholder { color: var(--t3); }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* ── 移动端触控适配 ── */
+@media (hover: none) and (pointer: coarse) {
+  .ghost-btn,
+  .primary-btn,
+  .lock-btn {
+    min-height: 44px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .size-btn {
+    min-height: 44px;
+    padding: 10px 4px;
+  }
+  .param-input,
+  .param-select {
+    min-height: 44px;
+    font-size: 16px; /* 防止 iOS 自动缩放 */
+  }
+  .prompt-ta {
+    font-size: 16px; /* 防止 iOS 自动缩放 */
+  }
+  .slider-group input[type="range"] {
+    height: 28px;
+  }
+  .seed-group .ghost-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
 </style>

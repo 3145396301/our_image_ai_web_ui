@@ -115,20 +115,23 @@ export default {
 </script>
 
 <style scoped>
+
 .other-operations-div {
+  height: 100%;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-around;
   align-items: center;
   background-color: #2d2d2d;
-  padding: 10px;
+  padding: 6px 10px;
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .other-operations-div-item {
-  flex: 1 0 16%; /* Each item will take up approximately 16% of the row, fitting 6 items per row */
+  flex: 1 0 16%;
   max-width: 16%;
+  min-height: 44px;
   cursor: pointer;
   transition: transform 0.2s;
   display: flex;
@@ -144,8 +147,43 @@ export default {
   transform: scale(0.9);
 }
 
+.other-operations-div-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+}
+
 .other-operations-div-item-icon img {
   width: 30px;
   height: 30px;
+}
+
+@media (max-width: 767px) {
+  .other-operations-div {
+    padding: 4px 6px;
+    border-radius: 6px;
+  }
+  .other-operations-div-item {
+    flex: 1 0 14%;
+    max-width: 14%;
+    min-height: 48px;
+  }
+  .other-operations-div-item-icon img {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+@media (max-width: 400px) {
+  .other-operations-div-item {
+    flex: 1 0 16%;
+    max-width: 16%;
+  }
+  .other-operations-div-item-icon img {
+    width: 22px;
+    height: 22px;
+  }
 }
 </style>
